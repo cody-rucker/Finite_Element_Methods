@@ -1,5 +1,6 @@
 using LinearAlgebra
 using SparseArrays
+using Plots
 
 # solve Poisson's equation
 #
@@ -7,11 +8,13 @@ using SparseArrays
 #          u(0) = 0
 #         uₓ(1) = 0
 
-N = 10
+
 h = 0.1
 x = 0:h:1
-
+N = length(x)
 f = 1
+
+b = (f*h) * ones(N)
 
 # build stiffness matrix Aᵢⱼ = ∫ϕ′ᵢ ⋅ ϕ′ⱼ
 Id = 1:N
@@ -34,13 +37,37 @@ A[N,N] = 0.5A[N,N]
 # basis function ϕ₁ is only defined for x₁ < x
 A[1,1] = 0.5A[1,1]
 
-# Dirichlet condition u(0) = 0 gives ϕ₁ = 0
-#A[1,1] = 0
-#A[1,2] = 0
-#A[2,1] = 0
+# use a Dirichlet extension to impose non-homogeneous boundary conditions
 
-b = (f*h) * ones(N)
+u∂ = zeros(N)
+u∂[1] = 0
+u∂[N] = 0
 
-u = A\b
+A∂ = A * u∂
 
-@show u
+b̃ = b - A∂
+
+# omit basis functions on boundary elements
+A[1,1] = 1
+A[1,2] = 0
+A[2,1] = 0
+
+
+# Neumann(natural) conditions are built in to the variational form
+# imposing them is just a matter of NOT imposing Dirichlet(essential)
+# conditions at a boundary point.
+
+# imposing Dirichlet conditon at x=1
+
+A[N,N] = 1
+A[N,N-1] = 0
+A[N-1,N] = 0
+
+
+# set RHS data
+b̃[1] = 0
+b̃[N] = 0
+
+u = A\b̃
+
+plot(u)
